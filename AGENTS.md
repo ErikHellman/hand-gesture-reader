@@ -16,11 +16,12 @@ uv run ruff check . && uv run ruff format .
 uv run handsign check                     # validate the config and list bindings
 uv run handsign run --preview [--dry-run] # debug window; --dry-run dispatches no actions
 uv run handsign detect IMAGE…             # run the classifier on still images
-uv tool install --reinstall .             # refresh the installed ~/.local/bin/handsign (used by the systemd unit)
+uv tool install --reinstall .             # refresh the installed ~/.local/bin/handsign (run by the service)
+handsign service install|status|restart|logs|stop   # background service: systemd / launchd
 ```
 
-Only one instance can run (it owns the camera and the control socket); stop the service
-(`systemctl --user stop handsign`) before running `handsign run` by hand.
+Only one instance can run (it owns the camera and the control socket); `handsign service stop`
+before running `handsign run` by hand, `handsign service restart` after reinstalling.
 
 ## Architecture
 
@@ -48,11 +49,20 @@ Pipeline: `camera → landmarks → poses → temporal/motion → recognizer (ar
   the vision loop.
 - `engine.py`: the daemon loop — pause/resume (pause closes the camera), idle throttling to a
   low fps when no hand is seen, preview and JSONL recording. `control.py` is the `handsign ctl`
-  channel: JSON lines over a unix socket in `$XDG_RUNTIME_DIR` (TCP localhost elsewhere).
+  channel: JSON lines over a unix socket in `$XDG_RUNTIME_DIR`, or `~/Library/Caches/handsign`
+  on macOS (not `$TMPDIR`, which differs between launchd and a terminal); TCP localhost on
+  Windows.
 - `actions/`: each type registers a factory with `@register("<type>")` in `base.py`; importing
   the `actions` package registers all of them. `hyprland` subclasses `CommandAction` (runs
   `hyprctl dispatch`, finding the instance signature itself under systemd). `keys` uses a
-  uinput virtual keyboard via evdev on Linux, pynput elsewhere.
+  uinput virtual keyboard via evdev on Linux, pynput elsewhere (a platform-marker dependency;
+  on macOS `open()` checks Accessibility access, without which key events are dropped silently).
+- `service.py`: `handsign service …`. Linux: renders a systemd user unit and drives
+  `systemctl --user`. macOS: a LaunchAgent that starts `~/Applications/Handsign.app`, an
+  `osacompile` AppleScript applet running `handsign run` in a shell restart loop. The app exists
+  for TCC: a bare executable started by launchd is silently denied the camera, whereas a child
+  of an app is judged as the app, whose Info.plist carries `NSCameraUsageDescription`. Its
+  output must be redirected to the log, since `do shell script` buffers it otherwise.
 - `config.py`: TOML → frozen dataclasses. `_section()` validates keys and types generically
   against the dataclass defaults, so adding a field to a config dataclass is enough to make it
   configurable. Unknown keys are errors everywhere.
@@ -62,9 +72,17 @@ Pipeline: `camera → landmarks → poses → temporal/motion → recognizer (ar
 - Tests build synthetic hands with `conftest.make_hand(fingers="IM", thumb="out", pinch=…,
   rotate_deg=…)` and drive `Recognizer.process(hands, t)` with explicit timestamps; all timing
   in the code is wall-clock (`t` in seconds), never frame counts.
-- `default_config.toml` is packaged and written by `handsign init`; its comments document every
-  option. When adding a pose, action type or config option, update it and the README tables too.
+- `handsign init` writes `default_config.toml` (options; its comments document every option)
+  followed by `default_bindings_linux.toml` or `default_bindings_macos.toml` (Linux file for
+  every non-macOS platform), joined in `config.default_config_text()`. Both bindings files must
+  stay valid on their platform; `test_default_config_is_valid` parses each. When adding a
+  pose, action type or config option, update them and the README tables too.
   Pose names come from `poses.POSES`, swipe names from `config.SWIPES`.
 - Hyprland on this machine is 0.55+ (Lua config): dispatch strings are Lua expressions like
   `hl.dsp.focus({ workspace = "e+1" })`, not the legacy `workspace e+1` syntax.
+- The dev machine is Linux, so the macOS service code is never run here: keep file rendering
+  pure and all commands going through the injected runner (`tests/test_service.py` fakes it
+  and `Path.home()`). Re-signing Handsign.app resets its camera / Accessibility grants, which is
+  why `install` only rebuilds it when missing, when the executable path changes, or with
+  `--force`.
 - Ruff: line length 100, rules E/F/I/B/UP; B008 and B905 are intentionally ignored.

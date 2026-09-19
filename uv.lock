@@ -282,11 +282,7 @@ dependencies = [
     { name = "evdev", marker = "sys_platform == 'linux'" },
     { name = "mediapipe" },
     { name = "numpy" },
-]
-
-[package.optional-dependencies]
-desktop = [
-    { name = "pynput" },
+    { name = "pynput", marker = "sys_platform != 'linux'" },
 ]
 
 [package.dev-dependencies]
@@ -300,9 +296,8 @@ requires-dist = [
     { name = "evdev", marker = "sys_platform == 'linux'", specifier = ">=2.0.0" },
     { name = "mediapipe", specifier = ">=1.0.1" },
     { name = "numpy", specifier = ">=2.5.3" },
-    { name = "pynput", marker = "extra == 'desktop'" },
+    { name = "pynput", marker = "sys_platform != 'linux'", specifier = ">=1.8" },
 ]
-provides-extras = ["desktop"]
 
 [package.metadata.requires-dev]
 dev = [

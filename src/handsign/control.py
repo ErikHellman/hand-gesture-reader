@@ -1,6 +1,7 @@
 """Control channel for `handsign ctl`: one JSON line per request / response.
 
-A unix socket in $XDG_RUNTIME_DIR where available, otherwise TCP on localhost.
+A unix socket in $XDG_RUNTIME_DIR where available (~/Library/Caches/handsign on macOS),
+otherwise TCP on localhost.
 """
 
 from __future__ import annotations
@@ -9,6 +10,7 @@ import json
 import logging
 import os
 import socket
+import sys
 import tempfile
 import threading
 from collections.abc import Callable
@@ -22,13 +24,20 @@ _HAS_UNIX = hasattr(socket, "AF_UNIX") and os.name != "nt"
 
 
 def socket_path() -> Path:
-    base = os.environ.get("XDG_RUNTIME_DIR") or tempfile.gettempdir()
-    return Path(base) / "handsign.sock"
+    if runtime := os.environ.get("XDG_RUNTIME_DIR"):
+        base = Path(runtime)
+    elif sys.platform == "darwin":
+        # Not $TMPDIR: a launchd agent and a terminal do not necessarily see the same one.
+        base = Path.home() / "Library" / "Caches" / "handsign"
+    else:
+        base = Path(tempfile.gettempdir())
+    return base / "handsign.sock"
 
 
 def _listen() -> socket.socket:
     if _HAS_UNIX:
         path = socket_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
         if path.exists():
             # Stale socket from a crashed daemon, or another instance?
             try:
@@ -36,7 +45,9 @@ def _listen() -> socket.socket:
             except OSError:
                 path.unlink()
             else:
-                raise RuntimeError("handsign is already running")
+                raise RuntimeError(
+                    "handsign is already running (stop the service: handsign service stop)"
+                )
         server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         server.bind(str(path))
         os.chmod(path, 0o600)

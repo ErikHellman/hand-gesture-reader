@@ -95,8 +95,14 @@ def default_config_path() -> Path:
     return base / "handsign" / "config.toml"
 
 
-def default_config_text() -> str:
-    return resources.files("handsign").joinpath("default_config.toml").read_text("utf-8")
+def default_config_text(platform: str = sys.platform) -> str:
+    """The options (shared) followed by the bindings for this platform."""
+    package = resources.files("handsign")
+    bindings = (
+        "default_bindings_macos.toml" if platform == "darwin" else "default_bindings_linux.toml"
+    )
+    options = package.joinpath("default_config.toml").read_text("utf-8")
+    return options + "\n" + package.joinpath(bindings).read_text("utf-8")
 
 
 def _section(cls: type, data: Any, name: str):

@@ -59,37 +59,3 @@ notify_gestures = false  # ... and for every gesture that fires
 #   { type = "keys",     combo = "ctrl+alt+Right" } or   { type = "keys", sequence = ["ctrl+k", "s"] }
 # optional per binding: hand = "left" | "right", hold_ms, repeat_ms (fire again while held),
 #                       cooldown_ms (default 500)
-
-[[binding]]
-gesture = "thumbs_up"
-repeat_ms = 250
-action = { type = "command", argv = ["wpctl", "set-volume", "-l", "1.0", "@DEFAULT_AUDIO_SINK@", "5%+"] }
-
-[[binding]]
-gesture = "thumbs_down"
-repeat_ms = 250
-action = { type = "command", argv = ["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "5%-"] }
-
-[[binding]]
-gesture = "peace"
-action = { type = "command", argv = ["playerctl", "play-pause"] }
-
-[[binding]]
-gesture = "rock"
-action = { type = "command", argv = ["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle"] }
-
-[[binding]]
-gesture = "point+swipe_right"
-action = { type = "command", argv = ["playerctl", "next"] }
-
-[[binding]]
-gesture = "point+swipe_left"
-action = { type = "command", argv = ["playerctl", "previous"] }
-
-[[binding]]
-gesture = "open_palm+swipe_left"
-action = { type = "hyprland", dispatch = 'hl.dsp.focus({ workspace = "e-1" })' }
-
-[[binding]]
-gesture = "open_palm+swipe_right"
-action = { type = "hyprland", dispatch = 'hl.dsp.focus({ workspace = "e+1" })' }

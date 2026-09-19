@@ -3,7 +3,7 @@
 Linux: a virtual keyboard through /dev/uinput (python-evdev). Works on Wayland, X11 and the
 console because the events enter at kernel level. Note that uinput sends key *codes*: letters
 follow the active keyboard layout.
-macOS / Windows: pynput (optional dependency, `pip install handsign[desktop]`).
+macOS / Windows: pynput. On macOS the responsible app needs Accessibility access.
 """
 
 from __future__ import annotations
@@ -120,7 +120,7 @@ class PynputBackend:
             from pynput import keyboard
         except ImportError as err:
             raise ActionError(
-                "keys actions need pynput on this platform: pip install 'handsign[desktop]'"
+                "keys actions need pynput on this platform: pip install pynput"
             ) from err
         self._keyboard = keyboard
         self._controller = keyboard.Controller()
@@ -138,7 +138,8 @@ class PynputBackend:
             self._key(key)
 
     def open(self) -> None:
-        pass
+        if sys.platform == "darwin":
+            _check_accessibility()
 
     def tap(self, keys: list[str]) -> None:
         resolved = [self._key(k) for k in keys]
@@ -149,6 +150,26 @@ class PynputBackend:
 
     def close(self) -> None:
         pass
+
+
+def _check_accessibility() -> None:
+    """macOS drops synthetic key events silently without Accessibility access. Asking also
+    makes the system show its prompt for the responsible app (Handsign.app or the terminal)."""
+    try:
+        from ApplicationServices import (
+            AXIsProcessTrustedWithOptions,
+            kAXTrustedCheckOptionPrompt,
+        )
+
+        trusted = AXIsProcessTrustedWithOptions({kAXTrustedCheckOptionPrompt: True})
+    except Exception as err:  # pyobjc comes with pynput, but never fail startup over this
+        log.debug("cannot check Accessibility access: %s", err)
+        return
+    if not trusted:
+        log.warning(
+            "keys actions need Accessibility access: System Settings → Privacy & Security → "
+            "Accessibility → enable Handsign (the service) or your terminal app"
+        )
 
 
 _backend: KeyBackend | None = None

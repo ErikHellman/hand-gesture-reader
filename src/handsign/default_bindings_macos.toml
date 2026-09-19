@@ -1,0 +1,39 @@
+# Default bindings for macOS. The `keys` actions need Accessibility access for Handsign.app
+# (or, when run from a terminal, for the terminal app): see "Run as a service" in the README.
+
+[[binding]]
+gesture = "thumbs_up"
+repeat_ms = 250
+action = { type = "command", argv = ["osascript", "-e", 'set volume output volume ((output volume of (get volume settings)) + 6)'] }
+
+[[binding]]
+gesture = "thumbs_down"
+repeat_ms = 250
+action = { type = "command", argv = ["osascript", "-e", 'set volume output volume ((output volume of (get volume settings)) - 6)'] }
+
+[[binding]]
+gesture = "peace"
+action = { type = "keys", combo = "play" }
+
+[[binding]]
+gesture = "rock"
+action = { type = "command", argv = ["osascript", "-e", 'set volume output muted (not (output muted of (get volume settings)))'] }
+
+[[binding]]
+gesture = "point+swipe_right"
+action = { type = "keys", combo = "next" }
+
+[[binding]]
+gesture = "point+swipe_left"
+action = { type = "keys", combo = "prev" }
+
+# Switch Spaces (Mission Control's default ctrl+arrow shortcuts). If synthetic arrow keys are
+# ignored, use: { type = "command", argv = ["osascript", "-e",
+#   'tell application "System Events" to key code 123 using control down'] }  (124 = right)
+[[binding]]
+gesture = "open_palm+swipe_left"
+action = { type = "keys", combo = "ctrl+left" }
+
+[[binding]]
+gesture = "open_palm+swipe_right"
+action = { type = "keys", combo = "ctrl+right" }

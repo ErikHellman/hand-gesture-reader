@@ -70,6 +70,33 @@ def _cmd_ctl(args: argparse.Namespace) -> int:
     return 0 if reply.get("ok") else 1
 
 
+def _cmd_service(args: argparse.Namespace) -> int:
+    from .service import ServiceError, get_service
+
+    status = 0
+    try:
+        service = get_service()
+        if args.action == "install":
+            service.install(start=not args.no_start, force=args.force)
+        elif args.action in ("status", "logs"):
+            status = getattr(service, args.action)()
+        else:
+            getattr(service, args.action)()
+    except ServiceError as err:
+        print(f"handsign: {err}", file=sys.stderr)
+        return 1
+    except KeyboardInterrupt:  # leaving `logs`
+        return 0
+    if args.action == "status":
+        from .control import send
+
+        try:
+            print(f"daemon: {json.dumps(send('status'))}")
+        except OSError:
+            print("daemon: not reachable")
+    return status
+
+
 def _cmd_detect(args: argparse.Namespace) -> int:
     import cv2
 
@@ -130,6 +157,18 @@ def main(argv: list[str] | None = None) -> int:
     ctl = sub.add_parser("ctl", help="talk to the running daemon")
     ctl.add_argument("command", choices=["status", "pause", "resume", "toggle", "quit"])
     ctl.set_defaults(func=_cmd_ctl)
+
+    service = sub.add_parser(
+        "service", help="run handsign in the background (systemd on Linux, launchd on macOS)"
+    )
+    service.add_argument(
+        "action", choices=["install", "uninstall", "start", "stop", "restart", "status", "logs"]
+    )
+    service.add_argument("--no-start", action="store_true", help="install: only enable at login")
+    service.add_argument(
+        "--force", action="store_true", help="install on macOS: rebuild Handsign.app"
+    )
+    service.set_defaults(func=_cmd_service)
 
     detect = sub.add_parser("detect", help="classify hands in still images")
     detect.add_argument("images", nargs="+", type=Path)

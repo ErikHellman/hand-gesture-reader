@@ -30,11 +30,14 @@ def parse(text: str):
     return parse_config(tomllib.loads(text))
 
 
-def test_default_config_is_valid(monkeypatch):
+@pytest.mark.parametrize("platform", ["linux", "darwin"])
+def test_default_config_is_valid(monkeypatch, platform):
     monkeypatch.setattr("shutil.which", lambda name: f"/usr/bin/{name}")
-    cfg = parse(default_config_text())
+    cfg = parse(default_config_text(platform))
     assert cfg.arming.enabled and cfg.arming.pose == "open_palm"
     assert {b.gesture for b in cfg.bindings} >= {"thumbs_up", "peace", "open_palm+swipe_left"}
+    uses_hyprland = any(b.action.describe().startswith("hyprctl") for b in cfg.bindings)
+    assert uses_hyprland == (platform == "linux")
 
 
 def test_empty_config_gives_defaults():
