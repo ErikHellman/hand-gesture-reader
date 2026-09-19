@@ -1,0 +1,48 @@
+[project]
+name = "handsign"
+version = "0.1.0"
+description = "Read hand signs from a camera and control the computer with them"
+authors = [
+    { name = "Erik Hellman", email = "erik@hellman.io" }
+]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "evdev>=2.0.0 ; sys_platform == 'linux'",
+    "mediapipe>=1.0.1",
+    "numpy>=2.5.3",
+]
+
+[project.scripts]
+handsign = "handsign:main"
+
+[build-system]
+requires = ["uv_build>=0.11.16,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.16.8",
+]
+
+[project.optional-dependencies]
+desktop = ["pynput"]  # key injection on macOS / Windows
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["tests"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+# B008: the defaults are frozen dataclasses. B905: zipped sequences are fixed-size by construction.
+ignore = ["B008", "B905"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["handsign", "conftest"]
